@@ -336,7 +336,7 @@ body.dice-rolling #current-scorecard { pointer-events: none; opacity: 0.5; }
 
 /* --- Scorecard / suggestions --- */
 .score-table { width: 100%; border-collapse: collapse; }
-.score-table th, .score-table td { padding: 0.4rem 0.5rem; text-align: left; border-bottom: 1px solid var(--border); font-size: 0.92rem; }
+.score-table th, .score-table td { padding: 0.4rem 0.5rem; text-align: left; border-bottom: 1px solid var(--border); font-size: 0.92rem; vertical-align: middle; }
 .score-row.open { background: rgba(184, 69, 47, 0.06); }
 .score-row.filled td { color: var(--muted); }
 .score-row.best { outline: 2px solid var(--accent-2); outline-offset: -2px; }
