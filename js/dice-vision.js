@@ -101,10 +101,29 @@ function isPlausibleDie(blob, imageArea) {
   if (w < 18 || h < 18) return false; // too small to read pips from
   const ratio = w / h;
   if (ratio < 0.55 || ratio > 1.8) return false; // dice photograph roughly square
+  // The pips are holes in this blob, so a six-spot face is far from solid, and a
+  // rotated die brings background corners into its box. Real photos measure
+  // around 0.46 here — the original 0.55 threshold rejected most of a throw.
   const fill = area / (w * h);
-  if (fill < 0.55) return false; // a die is a solid shape, not a ring or streak
+  if (fill < 0.33) return false;
   const share = area / imageArea;
   return share > 0.0006 && share < 0.35;
+}
+
+// Shrinks the mask by one pixel. Dice that merely touch are joined by a thin
+// bridge, which a couple of passes breaks — separating them without noticeably
+// moving the dice themselves.
+function erode(mask, width, height) {
+  const out = new Uint8Array(mask.length);
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const p = y * width + x;
+      if (!mask[p]) continue;
+      if (x === 0 || y === 0 || x === width - 1 || y === height - 1) continue;
+      if (mask[p - 1] && mask[p + 1] && mask[p - width] && mask[p + width]) out[p] = 1;
+    }
+  }
+  return out;
 }
 
 // Counts pips inside one die. Pips are the opposite polarity to the die body,
@@ -134,12 +153,14 @@ function countPips(gray, width, height, dieBlob, pipIsDark, threshold) {
   }
 
   const { blobs } = labelBlobs(sub, boxW, boxH, 1);
-  const dieArea = dieBlob.area;
+  // Sized against the die's box rather than its blob area: the blob shrinks
+  // when the face carries many pips, which would otherwise move the goalposts.
+  const boxArea = dieBlob.w * dieBlob.h;
   const pips = blobs.filter((b) => {
     // Enclosed by the die face, rather than leaking in from outside it.
     if (b.minX === 0 || b.minY === 0 || b.maxX === boxW - 1 || b.maxY === boxH - 1) return false;
-    const rel = b.area / dieArea;
-    if (rel < 0.003 || rel > 0.16) return false; // pips occupy a narrow size band
+    const rel = b.area / boxArea;
+    if (rel < 0.004 || rel > 0.09) return false; // pips occupy a narrow size band
     const ratio = b.w / b.h;
     if (ratio < 0.45 || ratio > 2.2) return false;
     const fill = b.area / (b.w * b.h);
@@ -148,34 +169,97 @@ function countPips(gray, width, height, dieBlob, pipIsDark, threshold) {
   return pips.length;
 }
 
-function readWithPolarity(gray, width, height, threshold, diceAreLight, expected) {
-  const mask = new Uint8Array(gray.length);
-  for (let i = 0; i < gray.length; i++) {
-    const light = gray[i] >= threshold;
-    mask[i] = (diceAreLight ? light : !light) ? 1 : 0;
-  }
+// Dice resting against each other share a whole edge, which erosion won't part.
+// Such a blob is a multiple of a single die's area, so it can be cut into that
+// many boxes along its longer axis — enough to read each face separately.
+function splitClumps(blobs, expected) {
+  const singles = blobs.filter((b) => {
+    const r = b.w / b.h;
+    return r > 0.7 && r < 1.4;
+  });
+  const reference = singles.length
+    ? singles.map((b) => b.area).sort((a, b) => a - b)[Math.floor(singles.length / 2)]
+    : 0;
+  if (!reference) return blobs;
 
-  const { labels, blobs } = labelBlobs(mask, width, height, 1);
+  const out = [];
+  for (const blob of blobs) {
+    const k = Math.round(blob.area / reference);
+    if (k < 2 || k > expected) {
+      out.push(blob);
+      continue;
+    }
+    const horizontal = blob.w >= blob.h;
+    const span = horizontal ? blob.w : blob.h;
+    const step = span / k;
+    for (let i = 0; i < k; i++) {
+      out.push({
+        minX: horizontal ? Math.round(blob.minX + i * step) : blob.minX,
+        minY: horizontal ? blob.minY : Math.round(blob.minY + i * step),
+        w: horizontal ? Math.round(step) : blob.w,
+        h: horizontal ? blob.h : Math.round(step),
+        area: Math.round(blob.area / k),
+        split: true,
+      });
+    }
+  }
+  return out;
+}
+
+function readAtErosion(gray, width, height, mask, threshold, diceAreLight, expected, level) {
   const imageArea = width * height;
-  const candidates = blobs
-    .filter((b) => isPlausibleDie(b, imageArea))
+  const { blobs } = labelBlobs(mask, width, height, 1);
+  const usable = blobs.filter((b) => isPlausibleDie(b, imageArea) || b.area / imageArea > 0.0006);
+  const candidates = splitClumps(usable, expected)
+    .filter((b) => b.split || isPlausibleDie(b, imageArea))
     .sort((a, b) => b.area - a.area)
     .slice(0, expected);
 
   const dice = [];
-  for (const die of candidates) {
-    const pips = countPips(gray, width, height, die, diceAreLight, threshold);
-    dice.push({ value: pips, box: die });
+  for (const blob of candidates) {
+    // Erosion pulled the outline in; grow the box back so the outermost pips
+    // are inside it again. A box cut out of a clump keeps its edges, since
+    // growing it would reach into the neighbouring die.
+    const grow = blob.split ? 0 : level;
+    const box = {
+      minX: Math.max(0, blob.minX - grow),
+      minY: Math.max(0, blob.minY - grow),
+      w: blob.w + grow * 2,
+      h: blob.h + grow * 2,
+      area: blob.area,
+    };
+    dice.push({ value: countPips(gray, width, height, box, diceAreLight, threshold), box });
   }
 
   const valid = dice.filter((d) => d.value >= 1 && d.value <= 6);
   return {
     diceAreLight,
+    level,
     found: dice.length,
     valid: valid.length,
     values: dice.map((d) => d.value),
     boxes: dice.map((d) => d.box),
   };
+}
+
+function readWithPolarity(gray, width, height, threshold, diceAreLight, expected) {
+  let mask = new Uint8Array(gray.length);
+  for (let i = 0; i < gray.length; i++) {
+    const light = gray[i] >= threshold;
+    mask[i] = (diceAreLight ? light : !light) ? 1 : 0;
+  }
+
+  // Dice that touch merge into one blob, so a single pass can't find them all.
+  // Erode progressively and keep the level that reads the whole throw; the
+  // expected dice count is what makes this decidable.
+  let best = null;
+  for (let level = 0; level <= 6; level++) {
+    if (level > 0) mask = erode(mask, width, height);
+    const reading = readAtErosion(gray, width, height, mask, threshold, diceAreLight, expected, level);
+    if (!best || scoreReading(reading, expected) > scoreReading(best, expected)) best = reading;
+    if (reading.found === expected && reading.valid === expected) break;
+  }
+  return best;
 }
 
 // Prefers the reading that finds the expected number of dice with every pip
