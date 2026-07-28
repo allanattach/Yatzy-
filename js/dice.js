@@ -51,6 +51,31 @@ function dieFace(value, { held, clickable } = {}) {
 // Guards against a second throw (or a hold toggle) landing mid-animation.
 let rolling = false;
 
+// Splits the dice into even rows: as many columns as fit, then balanced so the
+// last row isn't left with a single orphan (6 dice become 3+3, not 5+1).
+function layoutDiceRow(row, count) {
+  const die = row.querySelector(".die");
+  if (!die || !count) return;
+  const gap = parseFloat(getComputedStyle(row).columnGap) || 10;
+  const dieWidth = die.offsetWidth || 52;
+  const available = row.clientWidth || (row.parentElement ? row.parentElement.clientWidth : 0);
+  if (!available) return;
+
+  const perRow = Math.max(1, Math.floor((available + gap) / (dieWidth + gap)));
+  const rows = Math.ceil(count / perRow);
+  const columns = Math.ceil(count / rows);
+  row.style.gridTemplateColumns = `repeat(${columns}, ${dieWidth}px)`;
+}
+
+// Re-balance on rotation / window resize. One listener for the module; each
+// render replaces the callback so it always targets the live dice row.
+let relayoutCurrent = null;
+if (typeof window !== "undefined") {
+  window.addEventListener("resize", () => {
+    if (relayoutCurrent) relayoutCurrent();
+  });
+}
+
 export function renderVirtualDice(container, state, { onChange }) {
   container.hidden = false;
   container.innerHTML = "";
@@ -62,6 +87,9 @@ export function renderVirtualDice(container, state, { onChange }) {
   stage.className = "cup-stage";
   const cup = document.createElement("div");
   cup.className = "cup";
+  const rim = document.createElement("div");
+  rim.className = "cup-rim";
+  cup.appendChild(rim);
   stage.appendChild(cup);
   wrap.appendChild(stage);
 
@@ -118,6 +146,10 @@ export function renderVirtualDice(container, state, { onChange }) {
 
   container.appendChild(wrap);
 
+  // Needs to run after insertion, so the row has a measurable width.
+  layoutDiceRow(diceRow, state.dice.length);
+  relayoutCurrent = () => layoutDiceRow(diceRow, state.dice.length);
+
   async function throwDice() {
     if (rolling || !canRoll) return;
     rolling = true;
@@ -145,22 +177,41 @@ export function renderVirtualDice(container, state, { onChange }) {
       rollDice(state);
       shadow.classList.remove("stowed");
 
-      let lastSettle = 0;
-      airborne.forEach((idx, n) => {
+      // Where the mouth actually is right now, mid-tip. Measured rather than
+      // derived from the CSS angle, so it stays correct if the cup's size or
+      // pour animation is ever changed.
+      const rimRect = rim.getBoundingClientRect();
+      const mouthX = rimRect.left + rimRect.width / 2;
+      const mouthY = rimRect.top + rimRect.height / 2;
+
+      // Measure every resting slot up front. Adding .tumbling applies the
+      // animation's first frame immediately (fill mode "both"), which would
+      // displace a die and corrupt the measurements taken after it.
+      const slots = airborne.map((idx) => {
         const die = dieEls[idx];
-        if (!die) return;
+        if (!die) return null;
+        const rect = die.getBoundingClientRect();
+        return { idx, die, cx: rect.left + rect.width / 2, cy: rect.top + rect.height / 2 };
+      });
+
+      let lastSettle = 0;
+      slots.forEach((slot, n) => {
+        if (!slot) return;
+        const { idx, die } = slot;
         die.classList.remove("stowed");
 
-        // Alternate which side of the cup mouth each die spills from, and give
-        // every die its own arc and airtime so the throw never looks canned.
-        const fx = (n % 2 === 0 ? -1 : 1) * (34 + Math.random() * 54);
+        // Offset from this die's resting slot back to the cup mouth, so it
+        // starts in the opening and fans out to its place from there.
+        const fx = mouthX - slot.cx + (Math.random() - 0.5) * 14;
+        const fy = mouthY - slot.cy + (Math.random() - 0.5) * 10;
         // Whole turns only, so a die comes to rest upright and the later
         // re-render can't visibly snap its rotation.
         const spin = 360 * (1 + Math.floor(Math.random() * 3));
-        const dur = 0.6 + Math.random() * 0.26;
+        const dur = 0.62 + Math.random() * 0.26;
         const delay = n * stagger;
 
-        die.style.setProperty("--fx", `${fx.toFixed(0)}px`);
+        die.style.setProperty("--fx", `${fx.toFixed(1)}px`);
+        die.style.setProperty("--fy", `${fy.toFixed(1)}px`);
         die.style.setProperty("--spin", `${spin}deg`);
         die.style.setProperty("--dur", `${dur.toFixed(2)}s`);
         die.style.setProperty("--delay", `${delay.toFixed(2)}s`);
