@@ -10,7 +10,9 @@ const PIP_PATTERNS = {
   6: [0, 2, 3, 5, 6, 8],
 };
 
-const SHAKE_MS = 900; // how long the cup rattles before it is tipped
+const GATHER_MS = 320; // scooping loose dice back into the cup before a re-roll
+const GATHER_STAGGER = 0.03;
+const SHAKE_MS = 820; // how long the cup rattles before it is tipped
 const POUR_LEAD_MS = 150; // head start the cup gets before the dice spill out
 const FLICKER_MS = 70; // how fast faces change while a die is airborne
 
@@ -65,6 +67,25 @@ function layoutDiceRow(row, count) {
   const rows = Math.ceil(count / perRow);
   const columns = Math.ceil(count / rows);
   row.style.gridTemplateColumns = `repeat(${columns}, ${dieWidth}px)`;
+}
+
+// Offset from each die's resting slot to the cup's mouth, measured live from
+// the rim so it follows the cup's real size and pour angle. Every slot is read
+// before any animation class is applied: a class with a fill mode moves its
+// element immediately, which would corrupt the reads taken after it.
+function measureFromMouth(rim, dice) {
+  const rimRect = rim.getBoundingClientRect();
+  const mouthX = rimRect.left + rimRect.width / 2;
+  const mouthY = rimRect.top + rimRect.height / 2;
+  return dice.map((die) => {
+    if (!die) return null;
+    const rect = die.getBoundingClientRect();
+    return {
+      die,
+      dx: mouthX - (rect.left + rect.width / 2),
+      dy: mouthY - (rect.top + rect.height / 2),
+    };
+  });
 }
 
 // Re-balance on rotation / window resize. One listener for the module; each
@@ -167,6 +188,34 @@ export function renderVirtualDice(container, state, { onChange }) {
       // Tighten the stagger for the 12-dice variant, or the throw drags on.
       const stagger = airborne.length > 6 ? 0.04 : 0.08;
 
+      const airborneEls = airborne.map((idx) => dieEls[idx]);
+
+      // On a re-roll the loose dice are lying on the table, so collect them
+      // into the cup before it is shaken — otherwise the cup rattles while the
+      // dice it supposedly holds are still sitting outside it.
+      if (state.rollsUsed > 0 && airborneEls.some(Boolean)) {
+        const pickup = measureFromMouth(rim, airborneEls);
+        let gathered = 0;
+        pickup.forEach((slot, n) => {
+          if (!slot) return;
+          const delay = n * GATHER_STAGGER;
+          slot.die.style.setProperty("--gx", `${slot.dx.toFixed(1)}px`);
+          slot.die.style.setProperty("--gy", `${slot.dy.toFixed(1)}px`);
+          slot.die.style.setProperty("--gspin", `${140 + Math.round(Math.random() * 180)}deg`);
+          slot.die.style.setProperty("--gdelay", `${delay.toFixed(2)}s`);
+          slot.die.classList.add("gathering");
+          gathered = Math.max(gathered, delay * 1000 + GATHER_MS);
+        });
+        // Nothing is left on the table once every loose die is in the cup.
+        if (airborne.length === state.dice.length) shadow.classList.add("stowed");
+        await sleep(gathered + 40);
+        pickup.forEach((slot) => {
+          if (!slot) return;
+          slot.die.classList.remove("gathering");
+          slot.die.classList.add("stowed");
+        });
+      }
+
       cup.classList.add("shaking");
       await sleep(SHAKE_MS);
       cup.classList.remove("shaking");
@@ -177,33 +226,19 @@ export function renderVirtualDice(container, state, { onChange }) {
       rollDice(state);
       shadow.classList.remove("stowed");
 
-      // Where the mouth actually is right now, mid-tip. Measured rather than
-      // derived from the CSS angle, so it stays correct if the cup's size or
-      // pour animation is ever changed.
-      const rimRect = rim.getBoundingClientRect();
-      const mouthX = rimRect.left + rimRect.width / 2;
-      const mouthY = rimRect.top + rimRect.height / 2;
-
-      // Measure every resting slot up front. Adding .tumbling applies the
-      // animation's first frame immediately (fill mode "both"), which would
-      // displace a die and corrupt the measurements taken after it.
-      const slots = airborne.map((idx) => {
-        const die = dieEls[idx];
-        if (!die) return null;
-        const rect = die.getBoundingClientRect();
-        return { idx, die, cx: rect.left + rect.width / 2, cy: rect.top + rect.height / 2 };
-      });
+      // Measured mid-tip, so the dice leave from where the mouth actually is.
+      const slots = measureFromMouth(rim, airborneEls);
 
       let lastSettle = 0;
       slots.forEach((slot, n) => {
         if (!slot) return;
-        const { idx, die } = slot;
+        const die = slot.die;
+        const idx = airborne[n];
         die.classList.remove("stowed");
 
-        // Offset from this die's resting slot back to the cup mouth, so it
-        // starts in the opening and fans out to its place from there.
-        const fx = mouthX - slot.cx + (Math.random() - 0.5) * 14;
-        const fy = mouthY - slot.cy + (Math.random() - 0.5) * 10;
+        // Start in the opening and fan out to the resting slot from there.
+        const fx = slot.dx + (Math.random() - 0.5) * 14;
+        const fy = slot.dy + (Math.random() - 0.5) * 10;
         // Whole turns only, so a die comes to rest upright and the later
         // re-render can't visibly snap its rotation.
         const spin = 360 * (1 + Math.floor(Math.random() * 3));
