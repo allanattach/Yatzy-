@@ -153,9 +153,13 @@ main {
 /* --- Dice cup --- */
 .cup-wrap { display: flex; flex-direction: column; align-items: center; gap: 0.75rem; }
 
-/* Fixed-height stage keeps the layout from jumping while the cup tips over. */
+/* Fixed-height stage keeps the layout from jumping while the cup tips over.
+   Stacked above the dice so a die launching at the mouth is occluded by the
+   cup for its first frames — it emerges from behind the lip rather than
+   sliding across the front of it. */
 .cup-stage {
   position: relative;
+  z-index: 2;
   height: 128px;
   width: 100%;
   display: flex;
@@ -176,9 +180,10 @@ main {
       #8c5730 62%, #573014 82%, #2c1608 100%);
   box-shadow: inset 0 -14px 22px rgba(0, 0, 0, 0.5), 0 10px 16px rgba(0, 0, 0, 0.34);
 }
-/* Elliptical rim with a dark interior, so the cup reads as open at the top. */
-.cup::before {
-  content: "";
+/* Elliptical rim with a dark interior, so the cup reads as open at the top.
+   A real element rather than a pseudo-element, because dice.js measures it to
+   find where the mouth actually is once the cup has tipped. */
+.cup-rim {
   position: absolute;
   left: -3%;
   right: -3%;
@@ -235,11 +240,21 @@ main {
   background: radial-gradient(ellipse at 50% 50%, rgba(0, 0, 0, 0.28) 0%, rgba(0, 0, 0, 0) 72%);
 }
 
+/* Grid rather than flex-wrap: dice.js sets the column count so the dice split
+   into even rows (3+3, 4+4+4) instead of filling one row and orphaning the
+   remainder (5+1, 7+5). */
 .dice-row {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  /* Must span the wrap, which is a centred flex column and would otherwise
+     shrink this row to one die's width — leaving a single column. */
+  width: 100%;
+  /* Below .cup-stage: airborne dice are transformed, which would otherwise
+     paint them above the cup regardless of DOM order. */
+  position: relative;
+  z-index: 1;
   gap: 0.6rem;
   justify-content: center;
+  justify-items: center;
   min-height: 60px;
 }
 .die {
@@ -270,30 +285,38 @@ main {
     0 0 0 4px rgba(47, 122, 92, 0.18);
 }
 
-/* Fly out of the cup mouth, tumble through the air, then bounce to rest.
-   --fx / --spin / --dur / --delay are set per die from dice.js so no two
-   dice travel the same arc. */
+/* Spill out of the cup mouth, arc down under gravity, then bounce to rest.
+   --fx / --fy are the offset from a die's resting slot to the tipped cup's
+   mouth, measured live in dice.js, so every die genuinely emerges from the
+   cup opening. --spin / --dur / --delay vary per die so no two throws match.
+   The cup is a positioned element and therefore paints above the dice, which
+   is what makes a die read as coming out from inside it. */
 .die.tumbling {
-  animation: die-tumble var(--dur, 0.62s) cubic-bezier(0.2, 0.66, 0.3, 1.02) var(--delay, 0s) both;
+  animation: die-tumble var(--dur, 0.62s) cubic-bezier(0.3, 0.52, 0.36, 1) var(--delay, 0s) both;
 }
 @keyframes die-tumble {
   0% {
     opacity: 0;
-    transform: translate(var(--fx, -70px), -86px) rotate(0deg) scale(0.7);
+    transform: translate(var(--fx, -70px), var(--fy, -96px)) rotate(0deg) scale(0.5);
   }
-  12% { opacity: 1; }
-  52% {
-    transform: translate(calc(var(--fx, -70px) * 0.3), 10px)
-               rotate(calc(var(--spin, 460deg) * 0.62)) scale(1.05);
+  9%  { opacity: 1; }
+  22% {
+    transform: translate(calc(var(--fx, -70px) * 0.78), calc(var(--fy, -96px) * 0.72))
+               rotate(calc(var(--spin, 460deg) * 0.24)) scale(0.78);
   }
-  70% {
-    transform: translate(calc(var(--fx, -70px) * 0.08), -14px)
-               rotate(calc(var(--spin, 460deg) * 0.84)) scale(0.98);
+  50% {
+    /* Past the halfway point and sagging below the straight line: gravity. */
+    transform: translate(calc(var(--fx, -70px) * 0.34), calc(var(--fy, -96px) * 0.18 + 22px))
+               rotate(calc(var(--spin, 460deg) * 0.62)) scale(1.04);
   }
-  85% {
-    transform: translate(0, 4px) rotate(var(--spin, 460deg)) scale(1.02);
+  72% {
+    transform: translate(calc(var(--fx, -70px) * 0.07), -13px)
+               rotate(calc(var(--spin, 460deg) * 0.86)) scale(0.99);
   }
-  93% {
+  86% {
+    transform: translate(0, 4px) rotate(var(--spin, 460deg)) scale(1.03, 0.96);
+  }
+  94% {
     transform: translate(0, -4px) rotate(var(--spin, 460deg)) scale(0.99);
   }
   100% {
