@@ -390,6 +390,15 @@ body.dice-rolling #current-scorecard { pointer-events: none; opacity: 0.5; }
 .score-row.best { outline: 2px solid var(--accent-2); outline-offset: -2px; }
 .section-divider td { font-weight: 700; padding-top: 0.8rem; color: var(--muted); text-transform: uppercase; font-size: 0.75rem; border-bottom: none; }
 .score-actions { display: flex; gap: 0.4rem; justify-content: flex-end; }
+.par-hint {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 400;
+  color: var(--muted);
+  margin-top: 0.1rem;
+}
+.par-hint.par-over { color: var(--accent-2); font-weight: 600; }
+.par-hint.par-under { color: var(--accent); font-weight: 600; }
 .tag-struck { font-style: italic; color: var(--muted); }
 .suggestion-score { font-weight: 700; }
 
