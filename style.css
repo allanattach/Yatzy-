@@ -401,6 +401,9 @@ body.dice-rolling #current-scorecard { pointer-events: none; opacity: 0.5; }
 .tally-total { margin-top: 0.5rem; font-size: 0.9rem; color: var(--muted); }
 .tally-total.ok { color: var(--accent-2); font-weight: 600; }
 .photo-thumb { max-width: 160px; border-radius: 10px; margin: 0.5rem auto; display: block; box-shadow: var(--shadow); }
+.scan-status { font-size: 0.82rem; color: var(--muted); margin: 0.4rem 0 0; }
+.scan-status.scan-ok { color: var(--accent-2); font-weight: 600; }
+.scan-status.scan-warn { color: var(--accent); }
 
 /* --- Scorecard / suggestions --- */
 .score-table { width: 100%; border-collapse: collapse; }

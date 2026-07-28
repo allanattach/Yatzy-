@@ -1,6 +1,10 @@
+import { detectDice } from "./dice-vision.js";
+
 function currentTally(dice) {
   const t = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 };
-  dice.forEach((v) => { if (v >= 1 && v <= 6) t[v]++; });
+  dice.forEach((v) => {
+    if (v >= 1 && v <= 6) t[v]++;
+  });
   return t;
 }
 
@@ -34,7 +38,8 @@ export function renderPhysicalDice(container, state, { onChange }) {
 
   const intro = document.createElement("p");
   intro.className = "hold-hint";
-  intro.textContent = "Kast dine fysiske terninger. Tag evt. et billede som hjælp, og tæl så øjnene op herunder for at få forslag til poster.";
+  intro.textContent =
+    "Kast dine fysiske terninger og tag et billede – appen tæller selv øjnene op. Tjek tallene herunder og ret dem, hvis den har læst forkert.";
   wrap.appendChild(intro);
 
   const photoBtn = document.createElement("button");
@@ -51,25 +56,64 @@ export function renderPhysicalDice(container, state, { onChange }) {
   thumb.className = "photo-thumb";
   thumb.hidden = true;
 
+  const status = document.createElement("p");
+  status.className = "scan-status";
+  status.hidden = true;
+
+  function setStatus(text, kind) {
+    status.hidden = !text;
+    status.className = "scan-status" + (kind ? ` scan-${kind}` : "");
+    status.textContent = text;
+  }
+
   photoBtn.addEventListener("click", () => fileInput.click());
-  fileInput.addEventListener("change", () => {
+  fileInput.addEventListener("change", async () => {
     const file = fileInput.files[0];
     if (!file) return;
+
     const reader = new FileReader();
     reader.onload = () => {
       thumb.src = reader.result;
       thumb.hidden = false;
     };
     reader.readAsDataURL(file);
+
+    setStatus("Læser terningerne …", null);
+    try {
+      const result = await detectDice(file, state.variant);
+      if (result.complete) {
+        state.dice = result.values.slice().sort((a, b) => a - b);
+        refreshTally();
+        setStatus(
+          `Læste ${result.values.length} terninger: ${state.dice.join(", ")}. Ret herunder, hvis noget er læst forkert.`,
+          "ok"
+        );
+        onChange();
+        return;
+      }
+      setStatus(
+        result.found
+          ? `Kunne kun læse ${result.found} af ${state.variant} terninger sikkert – tæl op herunder i stedet.`
+          : "Kunne ikke genkende terningerne – tæl op herunder i stedet. Et billede lige ovenfra, med god belysning og terninger der ikke rører hinanden, virker bedst.",
+        "warn"
+      );
+    } catch (err) {
+      console.error("Terningegenkendelse fejlede", err);
+      setStatus("Billedet kunne ikke analyseres – tæl op herunder i stedet.", "warn");
+    }
   });
 
   wrap.appendChild(photoBtn);
   wrap.appendChild(fileInput);
   wrap.appendChild(thumb);
+  wrap.appendChild(status);
 
+  // The tally is built once and updated in place. Rebuilding the whole panel on
+  // every change would throw away the photo and the scan message along with it.
   const grid = document.createElement("div");
   grid.className = "tally-grid";
-  const tally = currentTally(state.dice);
+  const countEls = {};
+  const plusEls = {};
 
   for (let face = 1; face <= 6; face++) {
     const cell = document.createElement("div");
@@ -77,7 +121,7 @@ export function renderPhysicalDice(container, state, { onChange }) {
 
     const label = document.createElement("div");
     label.className = "tally-face";
-    label.textContent = `⚀⚁⚂⚃⚄⚅`[face - 1] || String(face);
+    label.textContent = "⚀⚁⚂⚃⚄⚅"[face - 1] || String(face);
     cell.appendChild(label);
 
     const counter = document.createElement("div");
@@ -86,26 +130,28 @@ export function renderPhysicalDice(container, state, { onChange }) {
     const minus = document.createElement("button");
     minus.type = "button";
     minus.textContent = "−";
+    minus.setAttribute("aria-label", `Én mindre med ${face}`);
     minus.addEventListener("click", () => {
       if (decrementFace(state.dice, face)) {
-        renderPhysicalDice(container, state, { onChange });
+        refreshTally();
         onChange();
       }
     });
 
     const count = document.createElement("span");
-    count.textContent = tally[face];
+    countEls[face] = count;
 
     const plus = document.createElement("button");
     plus.type = "button";
     plus.textContent = "+";
-    plus.disabled = totalSet(state.dice) >= state.variant;
+    plus.setAttribute("aria-label", `Én mere med ${face}`);
     plus.addEventListener("click", () => {
       if (incrementFace(state.dice, face)) {
-        renderPhysicalDice(container, state, { onChange });
+        refreshTally();
         onChange();
       }
     });
+    plusEls[face] = plus;
 
     counter.appendChild(minus);
     counter.appendChild(count);
@@ -115,10 +161,7 @@ export function renderPhysicalDice(container, state, { onChange }) {
   }
   wrap.appendChild(grid);
 
-  const total = totalSet(state.dice);
   const totalLine = document.createElement("div");
-  totalLine.className = "tally-total" + (total === state.variant ? " ok" : "");
-  totalLine.textContent = `${total} af ${state.variant} terninger talt op` + (total === state.variant ? " ✓" : "");
   wrap.appendChild(totalLine);
 
   const resetBtn = document.createElement("button");
@@ -129,10 +172,25 @@ export function renderPhysicalDice(container, state, { onChange }) {
   resetBtn.addEventListener("click", () => {
     state.dice = new Array(state.variant).fill(0);
     thumb.hidden = true;
-    renderPhysicalDice(container, state, { onChange });
+    thumb.removeAttribute("src");
+    setStatus("", null);
+    refreshTally();
     onChange();
   });
   wrap.appendChild(resetBtn);
 
+  function refreshTally() {
+    const tally = currentTally(state.dice);
+    const total = totalSet(state.dice);
+    for (let face = 1; face <= 6; face++) {
+      countEls[face].textContent = tally[face];
+      plusEls[face].disabled = total >= state.variant;
+    }
+    totalLine.className = "tally-total" + (total === state.variant ? " ok" : "");
+    totalLine.textContent =
+      `${total} af ${state.variant} terninger talt op` + (total === state.variant ? " ✓" : "");
+  }
+
+  refreshTally();
   container.appendChild(wrap);
 }
