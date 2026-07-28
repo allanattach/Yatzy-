@@ -48,8 +48,13 @@ export function renderCurrentScorecard(container, state, diceReady, { onApply, o
     }
     tr.appendChild(scoreTd);
 
+    // The buttons are laid out by an inner wrapper, never by the <td> itself:
+    // display:flex on a table cell drops it out of the row's height
+    // calculation, which leaves its bottom border misaligned with the others.
     const actionsTd = document.createElement("td");
-    actionsTd.className = "score-actions";
+    const actions = document.createElement("div");
+    actions.className = "score-actions";
+    actionsTd.appendChild(actions);
     if (!filled) {
       const applyBtn = document.createElement("button");
       applyBtn.type = "button";
@@ -57,14 +62,14 @@ export function renderCurrentScorecard(container, state, diceReady, { onApply, o
       applyBtn.textContent = "Vælg";
       applyBtn.disabled = !diceReady;
       applyBtn.addEventListener("click", () => onApply(cat.key));
-      actionsTd.appendChild(applyBtn);
+      actions.appendChild(applyBtn);
 
       const strikeBtn = document.createElement("button");
       strikeBtn.type = "button";
       strikeBtn.className = "btn btn-strike btn-small";
       strikeBtn.textContent = "Stryg";
       strikeBtn.addEventListener("click", () => onStrike(cat.key));
-      actionsTd.appendChild(strikeBtn);
+      actions.appendChild(strikeBtn);
     }
     tr.appendChild(actionsTd);
     table.appendChild(tr);
