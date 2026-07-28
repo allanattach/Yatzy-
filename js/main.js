@@ -1,5 +1,6 @@
 import { createGame, currentPlayer, applyScore, strikeCategory } from "./game.js";
 import { getRuleset } from "./rules.js";
+import { CATEGORY_ODDS, formatOdds, formatFrequency } from "./odds.js";
 import { saveState, loadState, clearState } from "./storage.js";
 import { renderVirtualDice } from "./dice.js";
 import { renderPhysicalDice, isPhysicalReadingComplete } from "./camera.js";
@@ -168,14 +169,40 @@ const rulesContent = document.getElementById("rules-content");
 document.getElementById("btn-rules").addEventListener("click", () => {
   const variant = state ? state.variant : Number(document.querySelector('input[name="variant"]:checked').value);
   const { upper, lower, bonusThreshold, bonusPoints } = getRuleset(variant);
+  const odds = CATEGORY_ODDS[variant] || {};
+
+  const rows = lower
+    .map((cat) => {
+      const p = odds[cat.key];
+      const chance = formatOdds(p, cat.key);
+      const freq = formatFrequency(p);
+      return `<tr>
+        <td>${cat.label}</td>
+        <td class="odds-value">${chance}${freq ? ` <span class="odds-freq">${freq}</span>` : ""}</td>
+      </tr>`;
+    })
+    .join("");
+
   rulesContent.innerHTML = `
     <h3>${variant} terninger</h3>
     <p>Op til 3 kast pr. tur. Øvre sektion bonus: ${bonusPoints} point ved ${bonusThreshold}+ i alt.</p>
     <p><strong>Øvre sektion:</strong> ${upper.map((c) => c.label).join(", ")}</p>
-    <p><strong>Nedre sektion:</strong> ${lower.map((c) => c.label).join(", ")}</p>
+    <h4>Nedre sektion – hvor svær er posten?</h4>
+    <table class="odds-table">
+      <tr><th>Post</th><th>Chance pr. tur</th></tr>
+      ${rows}
+    </table>
+    <p class="odds-note">Chancen er sandsynligheden for at få point i posten, hvis du spiller efter den:
+    3 kast, hvor du beholder de terninger der tjener målet. Beregnet ved simulering af 400.000 ture
+    med spillets egne pointregler, så tallene er vejledende – ikke en garanti.</p>
     <p>Du kan altid vælge at <em>stryge</em> en post i stedet for at bruge kastet – den post får 0 point.</p>
   `;
   rulesDialog.hidden = false;
+  // The panel scrolls now that it carries the odds table, and the element is
+  // reused between openings — without this it reopens wherever it was left.
+  // Must come after unhiding: scrollTop is ignored on a display:none element.
+  const dialogBox = rulesDialog.querySelector(".dialog");
+  if (dialogBox) dialogBox.scrollTop = 0;
 });
 document.getElementById("btn-close-rules").addEventListener("click", () => { rulesDialog.hidden = true; });
 

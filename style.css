@@ -435,6 +435,21 @@ table.scoreboard tr.total-row td { font-weight: 700; border-top: 2px solid var(-
 .dialog-overlay[hidden] { display: none; }
 .dialog { background: var(--surface); border-radius: 14px; padding: 1.5rem; max-width: 560px; max-height: 80vh; overflow-y: auto; }
 .dialog h3 { margin-bottom: 0.2rem; }
+.dialog h4 { margin-bottom: 0.3rem; font-size: 0.95rem; }
 .dialog p { color: var(--muted); margin-top: 0.2rem; }
+
+.odds-table { width: 100%; border-collapse: collapse; margin-bottom: 0.5rem; }
+.odds-table th, .odds-table td {
+  padding: 0.3rem 0.4rem;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  font-size: 0.88rem;
+  vertical-align: middle;
+}
+.odds-table th { color: var(--muted); font-size: 0.75rem; text-transform: uppercase; }
+.odds-table th:last-child, .odds-value { text-align: right; white-space: nowrap; }
+.odds-value { font-variant-numeric: tabular-nums; font-weight: 600; }
+.odds-freq { display: block; font-weight: 400; font-size: 0.75rem; color: var(--muted); }
+.odds-note { font-size: 0.78rem; }
 
 .hidden { display: none !important; }
