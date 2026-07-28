@@ -45,6 +45,7 @@ export function renderVirtualDice(container, state, { onChange }) {
     if (clickable) {
       die.addEventListener("click", () => {
         toggleHold(state, i);
+        renderVirtualDice(container, state, { onChange });
         onChange();
       });
     }
