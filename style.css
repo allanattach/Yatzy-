@@ -462,3 +462,11 @@ table.scoreboard tr.total-row td { font-weight: 700; border-top: 2px solid var(-
 .odds-note { font-size: 0.78rem; }
 
 .hidden { display: none !important; }
+
+/* In fullscreen the page owns the whole screen, so let the content use the extra
+   width instead of staying pinned to the phone-sized column. */
+:fullscreen main { max-width: 1100px; }
+:-webkit-full-screen main { max-width: 1100px; }
+/* The body background isn't painted behind a fullscreened root in every engine,
+   which would show through as black around the content. */
+:fullscreen, :-webkit-full-screen { background: var(--bg); overflow-y: auto; }

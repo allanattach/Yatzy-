@@ -1,10 +1,10 @@
 import { getAllCategories, scoreCategory } from "./rules.js";
 
-const MAX_ROLLS = 3;
+export const DEFAULT_MAX_ROLLS = 3;
 
 let nextPlayerId = 1;
 
-export function createGame(variant, mode, playerNames) {
+export function createGame(variant, mode, playerNames, maxRolls = DEFAULT_MAX_ROLLS) {
   const categories = getAllCategories(variant);
   const players = playerNames.map((name) => ({
     id: nextPlayerId++,
@@ -22,7 +22,7 @@ export function createGame(variant, mode, playerNames) {
     dice: new Array(variant).fill(0),
     held: new Array(variant).fill(false),
     rollsUsed: 0,
-    maxRolls: MAX_ROLLS,
+    maxRolls,
     gameOver: false,
     finishedAt: null,
   };

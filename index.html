@@ -11,6 +11,7 @@
 <header class="app-header">
   <h1>🎲 Yatzy</h1>
   <div class="header-actions">
+    <button id="btn-fullscreen" class="btn btn-ghost" type="button" hidden>⛶ Fuld skærm</button>
     <button id="btn-rules" class="btn btn-ghost" type="button">Regler</button>
     <button id="btn-new-game" class="btn btn-ghost" type="button" hidden>Nyt spil</button>
   </div>
@@ -35,6 +36,15 @@
           <label class="option"><input type="radio" name="variant" value="5" checked><span>5 terninger <small>(klassisk Yatzy)</small></span></label>
           <label class="option"><input type="radio" name="variant" value="6"><span>6 terninger <small>(Maxi Yatzy)</small></span></label>
           <label class="option"><input type="radio" name="variant" value="12"><span>12 terninger <small>(Gigant Yatzy)</small></span></label>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Antal kast pr. tur</h2>
+        <div class="option-row" id="rolls-options">
+          <label class="option"><input type="radio" name="rolls" value="3" checked><span>3 kast <small>(officielle regler)</small></span></label>
+          <label class="option"><input type="radio" name="rolls" value="4"><span>4 kast <small>lidt mildere</small></span></label>
+          <label class="option"><input type="radio" name="rolls" value="5"><span>5 kast <small>bedst til de svære poster</small></span></label>
         </div>
       </div>
 
