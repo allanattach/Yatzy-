@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="da">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Yatzy</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<header class="app-header">
+  <h1>🎲 Yatzy</h1>
+  <div class="header-actions">
+    <button id="btn-rules" class="btn btn-ghost" type="button">Regler</button>
+    <button id="btn-new-game" class="btn btn-ghost" type="button" hidden>Nyt spil</button>
+  </div>
+</header>
+
+<main>
+
+  <!-- SETUP SCREEN -->
+  <section id="screen-setup" class="screen">
+    <div id="resume-banner" class="banner" hidden>
+      <p>Der er et gemt spil i gang.</p>
+      <div class="banner-actions">
+        <button id="btn-resume" class="btn btn-primary" type="button">Fortsæt spil</button>
+        <button id="btn-discard" class="btn btn-ghost" type="button">Start nyt i stedet</button>
+      </div>
+    </div>
+
+    <div id="setup-form">
+      <div class="card">
+        <h2>Antal terninger</h2>
+        <div class="option-row" id="variant-options">
+          <label class="option"><input type="radio" name="variant" value="5" checked><span>5 terninger <small>(klassisk Yatzy)</small></span></label>
+          <label class="option"><input type="radio" name="variant" value="6"><span>6 terninger <small>(Maxi Yatzy)</small></span></label>
+          <label class="option"><input type="radio" name="variant" value="12"><span>12 terninger <small>(Gigant Yatzy)</small></span></label>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Terningetype</h2>
+        <div class="option-row" id="mode-options">
+          <label class="option"><input type="radio" name="mode" value="virtual" checked><span>Virtuelle terninger <small>terningebæger i appen</small></span></label>
+          <label class="option"><input type="radio" name="mode" value="physical"><span>Fysiske terninger <small>tag billede af dine egne</small></span></label>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Spillere</h2>
+        <ul id="player-list" class="player-list"></ul>
+        <button id="btn-add-player" class="btn btn-ghost" type="button">+ Tilføj spiller</button>
+      </div>
+
+      <button id="btn-start" class="btn btn-primary btn-large" type="button">Start spil</button>
+    </div>
+  </section>
+
+  <!-- GAME SCREEN -->
+  <section id="screen-game" class="screen" hidden>
+    <div class="game-status">
+      <div>Runde <span id="round-number">1</span></div>
+      <div class="current-player">Nu spiller: <strong id="current-player-name"></strong></div>
+    </div>
+
+    <div id="virtual-dice-area" class="dice-area" hidden></div>
+    <div id="physical-dice-area" class="dice-area" hidden></div>
+
+    <div class="card">
+      <h2>Din scoreseddel</h2>
+      <div id="current-scorecard"></div>
+    </div>
+
+    <div class="card">
+      <h2>Samlet scoreboard</h2>
+      <div id="scoreboard-wrap" class="scoreboard-wrap"></div>
+    </div>
+  </section>
+
+  <!-- PODIUM SCREEN -->
+  <section id="screen-podium" class="screen" hidden>
+    <h2>Spillet er slut!</h2>
+    <div id="podium"></div>
+    <div id="final-table"></div>
+    <button id="btn-play-again" class="btn btn-primary btn-large" type="button">Spil igen</button>
+  </section>
+
+</main>
+
+<div id="rules-dialog" class="dialog-overlay" hidden>
+  <div class="dialog">
+    <h2>Spilleregler</h2>
+    <div id="rules-content"></div>
+    <button id="btn-close-rules" class="btn btn-primary" type="button">Luk</button>
+  </div>
+</div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
