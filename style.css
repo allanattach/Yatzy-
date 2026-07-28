@@ -10,6 +10,7 @@
   --bronze: #b0703a;
   --border: #e1dbcd;
   --die-face: #fffdf8;
+  --die-edge: #e4dbca;
   --die-pip: #211a12;
   --held: #2f7a5c;
   --shadow: 0 2px 10px rgba(33, 26, 18, 0.08);
@@ -25,6 +26,7 @@
     --accent-2: #4fa87d;
     --border: #38332a;
     --die-face: #f2ede3;
+    --die-edge: #cbc1ae;
     --die-pip: #17140f;
     --held: #4fa87d;
     --shadow: 0 2px 14px rgba(0, 0, 0, 0.4);
@@ -150,18 +152,87 @@ main {
 
 /* --- Dice cup --- */
 .cup-wrap { display: flex; flex-direction: column; align-items: center; gap: 0.75rem; }
-.cup {
-  width: 110px;
-  height: 90px;
-  background: linear-gradient(160deg, #8a5a34, #6b4224);
-  clip-path: polygon(15% 0%, 85% 0%, 100% 100%, 0% 100%);
+
+/* Fixed-height stage keeps the layout from jumping while the cup tips over. */
+.cup-stage {
   position: relative;
-  box-shadow: inset 0 -6px 10px rgba(0,0,0,0.3);
+  height: 128px;
+  width: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
 }
-.cup.shaking { animation: cup-shake 0.5s ease-in-out infinite; }
+
+.cup {
+  position: relative;
+  width: 94px;
+  height: 108px;
+  transform-origin: 50% 92%;
+  /* Wider at the rim than at the base, like a real leather dice cup. */
+  clip-path: polygon(0% 0%, 100% 0%, 80% 100%, 20% 100%);
+  background:
+    linear-gradient(103deg,
+      #351c0c 0%, #5e3618 14%, #96633a 34%, #b8834f 47%,
+      #8c5730 62%, #573014 82%, #2c1608 100%);
+  box-shadow: inset 0 -14px 22px rgba(0, 0, 0, 0.5), 0 10px 16px rgba(0, 0, 0, 0.34);
+}
+/* Elliptical rim with a dark interior, so the cup reads as open at the top. */
+.cup::before {
+  content: "";
+  position: absolute;
+  left: -3%;
+  right: -3%;
+  top: -10px;
+  height: 22px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at 50% 32%, #1b0d04 0%, #2e1809 52%, #7d4f2a 88%, #a9723f 100%);
+  box-shadow: inset 0 4px 7px rgba(0, 0, 0, 0.75);
+}
+/* Stitched seams down the body. */
+.cup::after {
+  content: "";
+  position: absolute;
+  top: 16px;
+  bottom: 14px;
+  left: 22%;
+  right: 22%;
+  border-left: 2px dashed rgba(255, 226, 190, 0.16);
+  border-right: 2px dashed rgba(255, 226, 190, 0.16);
+}
+
+.cup.shaking { animation: cup-shake 0.34s cubic-bezier(0.36, 0.07, 0.19, 0.97) infinite; }
 @keyframes cup-shake {
-  0%, 100% { transform: rotate(-8deg) translateX(-4px); }
-  50% { transform: rotate(8deg) translateX(4px); }
+  0%   { transform: translate(0, 0) rotate(0deg); }
+  14%  { transform: translate(-8px, -11px) rotate(-15deg); }
+  29%  { transform: translate(7px, -4px) rotate(11deg); }
+  43%  { transform: translate(-6px, -13px) rotate(-11deg); }
+  57%  { transform: translate(8px, -3px) rotate(14deg); }
+  71%  { transform: translate(-5px, -9px) rotate(-7deg); }
+  86%  { transform: translate(4px, -5px) rotate(5deg); }
+  100% { transform: translate(0, 0) rotate(0deg); }
+}
+
+/* Tip the mouth down and to the left, then settle back upright. */
+.cup.pouring { animation: cup-pour 1s cubic-bezier(0.34, 0.11, 0.2, 1) both; }
+@keyframes cup-pour {
+  0%   { transform: rotate(0deg) translate(0, 0); }
+  22%  { transform: rotate(-62deg) translate(-16px, -10px); }
+  46%  { transform: rotate(-52deg) translate(-13px, -4px); }
+  70%  { transform: rotate(-30deg) translate(-7px, -1px); }
+  100% { transform: rotate(0deg) translate(0, 0); }
+}
+
+/* Dice still in the cup: keep their slot, but don't draw them. */
+.die.stowed { opacity: 0; pointer-events: none; }
+.dice-shadow.stowed { opacity: 0; }
+
+/* Soft contact shadow the dice land onto. */
+.dice-shadow {
+  width: min(90%, 340px);
+  height: 12px;
+  margin: -2px auto 0;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at 50% 50%, rgba(0, 0, 0, 0.28) 0%, rgba(0, 0, 0, 0) 72%);
 }
 
 .dice-row {
@@ -174,22 +245,77 @@ main {
 .die {
   width: 52px;
   height: 52px;
-  background: var(--die-face);
-  border-radius: 10px;
-  box-shadow: 0 3px 6px rgba(0,0,0,0.3);
+  background:
+    radial-gradient(circle at 32% 26%, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0) 58%),
+    linear-gradient(150deg, var(--die-face) 0%, var(--die-face) 55%, var(--die-edge) 100%);
+  border-radius: 11px;
+  box-shadow:
+    inset 0 2px 3px rgba(255, 255, 255, 0.85),
+    inset 0 -3px 5px rgba(0, 0, 0, 0.22),
+    0 4px 7px rgba(0, 0, 0, 0.32);
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   grid-template-rows: repeat(3, 1fr);
   padding: 7px;
   cursor: pointer;
-  transition: transform 0.15s;
+  transition: transform 0.15s, box-shadow 0.15s;
   border: 3px solid transparent;
 }
-.die.held { border-color: var(--held); transform: translateY(-4px); }
-.die.rolling { animation: die-roll 0.4s ease-out; }
-@keyframes die-roll {
-  0% { transform: rotate(0deg) scale(0.6); opacity: 0.3; }
-  100% { transform: rotate(360deg) scale(1); opacity: 1; }
+.die.held {
+  border-color: var(--held);
+  transform: translateY(-6px);
+  box-shadow:
+    inset 0 2px 3px rgba(255, 255, 255, 0.85),
+    0 9px 12px rgba(0, 0, 0, 0.32),
+    0 0 0 4px rgba(47, 122, 92, 0.18);
+}
+
+/* Fly out of the cup mouth, tumble through the air, then bounce to rest.
+   --fx / --spin / --dur / --delay are set per die from dice.js so no two
+   dice travel the same arc. */
+.die.tumbling {
+  animation: die-tumble var(--dur, 0.62s) cubic-bezier(0.2, 0.66, 0.3, 1.02) var(--delay, 0s) both;
+}
+@keyframes die-tumble {
+  0% {
+    opacity: 0;
+    transform: translate(var(--fx, -70px), -86px) rotate(0deg) scale(0.7);
+  }
+  12% { opacity: 1; }
+  52% {
+    transform: translate(calc(var(--fx, -70px) * 0.3), 10px)
+               rotate(calc(var(--spin, 460deg) * 0.62)) scale(1.05);
+  }
+  70% {
+    transform: translate(calc(var(--fx, -70px) * 0.08), -14px)
+               rotate(calc(var(--spin, 460deg) * 0.84)) scale(0.98);
+  }
+  85% {
+    transform: translate(0, 4px) rotate(var(--spin, 460deg)) scale(1.02);
+  }
+  93% {
+    transform: translate(0, -4px) rotate(var(--spin, 460deg)) scale(0.99);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(0, 0) rotate(var(--spin, 460deg)) scale(1);
+  }
+}
+
+/* Tiny squash the instant a die settles on its final face. */
+.die.landed { animation: die-land 0.22s ease-out; }
+@keyframes die-land {
+  0%   { transform: scale(1.06, 0.92); }
+  60%  { transform: scale(0.99, 1.02); }
+  100% { transform: scale(1, 1); }
+}
+
+/* The scorecard's suggestions belong to the previous throw until the dice
+   settle, so keep it out of reach while they are in the air. */
+body.dice-rolling #current-scorecard { pointer-events: none; opacity: 0.5; }
+
+@media (prefers-reduced-motion: reduce) {
+  .cup.shaking, .cup.pouring, .die.tumbling, .die.landed { animation: none !important; }
 }
 .pip { border-radius: 50%; background: var(--die-pip); align-self: center; justify-self: center; width: 8px; height: 8px; opacity: 0; }
 .pip.on { opacity: 1; }
