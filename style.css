@@ -325,6 +325,30 @@ main {
   }
 }
 
+/* Scooped back into the cup before a re-roll: loose dice can't still be lying
+   on the table while the cup is being shaken. Mirrors the spill — same measured
+   mouth offset, travelled the other way — and ends invisible, since by then the
+   die is inside the cup. */
+.die.gathering {
+  animation: die-gather var(--gdur, 0.32s) cubic-bezier(0.45, 0, 0.7, 0.52) var(--gdelay, 0s) forwards;
+}
+@keyframes die-gather {
+  0% {
+    opacity: 1;
+    transform: translate(0, 0) rotate(0deg) scale(1);
+  }
+  65% {
+    opacity: 1;
+    transform: translate(calc(var(--gx, 0px) * 0.82), calc(var(--gy, -90px) * 0.82 - 8px))
+               rotate(calc(var(--gspin, 220deg) * 0.7)) scale(0.78);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--gx, 0px), var(--gy, -90px))
+               rotate(var(--gspin, 220deg)) scale(0.42);
+  }
+}
+
 /* Tiny squash the instant a die settles on its final face. */
 .die.landed { animation: die-land 0.22s ease-out; }
 @keyframes die-land {
@@ -338,7 +362,8 @@ main {
 body.dice-rolling #current-scorecard { pointer-events: none; opacity: 0.5; }
 
 @media (prefers-reduced-motion: reduce) {
-  .cup.shaking, .cup.pouring, .die.tumbling, .die.landed { animation: none !important; }
+  .cup.shaking, .cup.pouring,
+  .die.tumbling, .die.landed, .die.gathering { animation: none !important; }
 }
 .pip { border-radius: 50%; background: var(--die-pip); align-self: center; justify-self: center; width: 8px; height: 8px; opacity: 0; }
 .pip.on { opacity: 1; }
