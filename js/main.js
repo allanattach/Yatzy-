@@ -1,6 +1,12 @@
-import { createGame, currentPlayer, applyScore, strikeCategory } from "./game.js";
+import {
+  createGame,
+  currentPlayer,
+  applyScore,
+  strikeCategory,
+  DEFAULT_MAX_ROLLS,
+} from "./game.js";
 import { getRuleset, bonusParPerFace } from "./rules.js";
-import { CATEGORY_ODDS, formatOdds, formatFrequency } from "./odds.js";
+import { oddsFor, formatOdds, formatFrequency } from "./odds.js";
 import { saveState, loadState, clearState } from "./storage.js";
 import { renderVirtualDice } from "./dice.js";
 import { renderPhysicalDice, isPhysicalReadingComplete } from "./camera.js";
@@ -52,11 +58,12 @@ btnAddPlayer.addEventListener("click", () => addPlayerRow());
 btnStart.addEventListener("click", () => {
   const variant = Number(document.querySelector('input[name="variant"]:checked').value);
   const mode = document.querySelector('input[name="mode"]:checked').value;
+  const rolls = Number(document.querySelector('input[name="rolls"]:checked').value);
   const names = Array.from(playerList.querySelectorAll("input[type=text]"))
     .map((inp, i) => inp.value.trim() || `Spiller ${i + 1}`);
   if (names.length === 0) return;
 
-  state = createGame(variant, mode, names);
+  state = createGame(variant, mode, names, rolls);
   saveState(state);
   showScreen("game");
   renderGameScreen();
@@ -72,6 +79,8 @@ if (savedOnLoad && !savedOnLoad.gameOver) {
 
 btnResume.addEventListener("click", () => {
   state = savedOnLoad;
+  // Games saved before the roll count was configurable carry no maxRolls.
+  if (!state.maxRolls) state.maxRolls = DEFAULT_MAX_ROLLS;
   resumeBanner.hidden = true;
   showScreen("game");
   renderGameScreen();
@@ -163,13 +172,52 @@ btnPlayAgain.addEventListener("click", () => {
   showScreen("setup");
 });
 
+// ---------- Fullscreen ----------
+// Hidden entirely where the API is unavailable — notably Safari on iPhone,
+// which only allows fullscreen for video — rather than offering a dead button.
+const btnFullscreen = document.getElementById("btn-fullscreen");
+const docEl = document.documentElement;
+const requestFs = docEl.requestFullscreen || docEl.webkitRequestFullscreen;
+const exitFs = document.exitFullscreen || document.webkitExitFullscreen;
+
+function fullscreenElement() {
+  return document.fullscreenElement || document.webkitFullscreenElement || null;
+}
+
+function syncFullscreenButton() {
+  const on = Boolean(fullscreenElement());
+  btnFullscreen.textContent = on ? "⛶ Afslut fuld skærm" : "⛶ Fuld skærm";
+  btnFullscreen.setAttribute("aria-pressed", String(on));
+}
+
+if (requestFs && exitFs) {
+  btnFullscreen.hidden = false;
+  syncFullscreenButton();
+  btnFullscreen.addEventListener("click", async () => {
+    try {
+      if (fullscreenElement()) await exitFs.call(document);
+      else await requestFs.call(docEl);
+    } catch (err) {
+      // A rejected request (permissions policy, iPad quirks) shouldn't leave the
+      // label out of step with reality.
+      console.error("Fuld skærm blev afvist", err);
+    }
+    syncFullscreenButton();
+  });
+  // Keep the label honest when the user leaves fullscreen with Esc or a gesture.
+  document.addEventListener("fullscreenchange", syncFullscreenButton);
+  document.addEventListener("webkitfullscreenchange", syncFullscreenButton);
+}
+
 // ---------- Rules dialog ----------
 const rulesDialog = document.getElementById("rules-dialog");
 const rulesContent = document.getElementById("rules-content");
 document.getElementById("btn-rules").addEventListener("click", () => {
   const variant = state ? state.variant : Number(document.querySelector('input[name="variant"]:checked').value);
+  const rolls = state ? state.maxRolls : Number(document.querySelector('input[name="rolls"]:checked').value);
   const { upper, lower, bonusThreshold, bonusPoints } = getRuleset(variant);
-  const odds = CATEGORY_ODDS[variant] || {};
+  // Odds depend on how many rolls a turn gets, so they follow the setting.
+  const odds = oddsFor(variant, rolls);
   const parCount = bonusParPerFace(variant);
 
   const rows = lower
@@ -186,7 +234,7 @@ document.getElementById("btn-rules").addEventListener("click", () => {
 
   rulesContent.innerHTML = `
     <h3>${variant} terninger</h3>
-    <p>Op til 3 kast pr. tur.</p>
+    <p>Op til ${rolls} kast pr. tur.${rolls === 3 ? "" : " (Valgt ved spilstart – de officielle regler bruger 3.)"}</p>
     <p><strong>Øvre sektion:</strong> ${upper.map((c) => c.label).join(", ")}</p>
     <p><strong>Bonus:</strong> ${bonusPoints} point hvis øvre sektion når ${bonusThreshold} i alt.${
       parCount
@@ -199,7 +247,7 @@ document.getElementById("btn-rules").addEventListener("click", () => {
       ${rows}
     </table>
     <p class="odds-note">Chancen er sandsynligheden for at få point i posten, hvis du spiller efter den:
-    3 kast, hvor du beholder de terninger der tjener målet. Beregnet ved simulering af 400.000 ture
+    ${rolls} kast, hvor du beholder de terninger der tjener målet. Beregnet ved simulering af 200.000 ture
     med spillets egne pointregler, så tallene er vejledende – ikke en garanti.</p>
     <p>Du kan altid vælge at <em>stryge</em> en post i stedet for at bruge kastet – den post får 0 point.</p>
   `;
