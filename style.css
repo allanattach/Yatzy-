@@ -54,8 +54,23 @@ body {
   background: var(--surface);
   border-bottom: 1px solid var(--border);
 }
-.app-header h1 { margin: 0; font-size: 1.4rem; }
-.header-actions { display: flex; gap: 0.5rem; }
+.app-header h1 { margin: 0; font-size: 1.4rem; white-space: nowrap; }
+.header-actions { display: flex; gap: 0.5rem; align-items: center; }
+
+/* On a phone the three header buttons plus the title don't fit at full size.
+   Trim them down, and drop the fullscreen label to its icon — the longest
+   label, "Afslut fuld skærm", is what overflowed. */
+@media (max-width: 520px) {
+  .app-header { padding: 0.6rem 0.85rem; }
+  .app-header h1 { font-size: 1.15rem; }
+  .header-actions { gap: 0.35rem; }
+  .header-actions .btn { padding: 0.45rem 0.7rem; font-size: 0.82rem; }
+  #btn-fullscreen .btn-label { display: none; }
+  /* Same font-size as its neighbours so the pills line up; the glyph alone is
+     scaled up instead. */
+  #btn-fullscreen { padding: 0.45rem 0.65rem; }
+  #btn-fullscreen .btn-icon { font-size: 1.05rem; line-height: 1; }
+}
 
 main {
   max-width: 900px;
@@ -80,7 +95,12 @@ main {
   font-size: 0.95rem;
   cursor: pointer;
   font-weight: 600;
+  /* Without this a header button that doesn't fit wraps its own text, turning
+     the pill into a three-line blob and inflating the header. */
+  white-space: nowrap;
 }
+.btn-icon { margin-right: 0.35rem; }
+.btn-icon:only-child { margin-right: 0; }
 .btn-primary { background: var(--accent); color: white; }
 .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
 .btn-ghost { background: transparent; color: var(--text); border: 1px solid var(--border); }

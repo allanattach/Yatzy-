@@ -184,9 +184,15 @@ function fullscreenElement() {
   return document.fullscreenElement || document.webkitFullscreenElement || null;
 }
 
+const fullscreenLabel = btnFullscreen.querySelector(".btn-label");
+
 function syncFullscreenButton() {
   const on = Boolean(fullscreenElement());
-  btnFullscreen.textContent = on ? "⛶ Afslut fuld skærm" : "⛶ Fuld skærm";
+  const text = on ? "Afslut fuld skærm" : "Fuld skærm";
+  // The visible label is hidden on narrow screens, so the accessible name has
+  // to come from aria-label rather than the button's text.
+  fullscreenLabel.textContent = text;
+  btnFullscreen.setAttribute("aria-label", text);
   btnFullscreen.setAttribute("aria-pressed", String(on));
 }
 
