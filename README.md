@@ -1,1 +1,1 @@
-# Yatzy-
+# Yatzy
