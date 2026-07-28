@@ -27,6 +27,20 @@ jobs:
       - name: Configure Pages
         uses: actions/configure-pages@v5
 
+      # GitHub Pages serves assets with cache-control: max-age=600, so browsers
+      # keep running the previous JS for up to 10 minutes after a deploy. Stamp
+      # the commit SHA onto every module import and asset link so each deploy
+      # produces new URLs that can't be served from a stale cache.
+      - name: Cache-bust assets with commit SHA
+        run: |
+          set -euo pipefail
+          V="${GITHUB_SHA::12}"
+          sed -i -E "s|(from \"\./[A-Za-z0-9_-]+\.js)\"|\1?v=$V\"|g" js/*.js
+          sed -i -E "s|(src=\"js/main\.js)\"|\1?v=$V\"|" index.html
+          sed -i -E "s|(href=\"style\.css)\"|\1?v=$V\"|" index.html
+          echo "Stamped version $V:"
+          grep -n "?v=$V" index.html js/*.js
+
       - name: Upload site
         uses: actions/upload-pages-artifact@v3
         with:
