@@ -104,6 +104,7 @@ function buildRuleset(variant) {
     key: c.key,
     label: c.label,
     section: "upper",
+    face: c.face,
     score: (dice) => upperScore(dice, c.face),
   }));
 
@@ -285,6 +286,15 @@ export function scoreCategory(variant, categoryKey, dice) {
   const cat = getAllCategories(variant).find((c) => c.key === categoryKey);
   if (!cat) throw new Error(`Unknown category: ${categoryKey}`);
   return cat.score(dice);
+}
+
+// Every bonus threshold is a multiple of 21 (1+2+…+6), so it corresponds
+// exactly to holding N of every face: 63 = 3 of each, 84 = 4 of each,
+// 168 = 8 of each. Returns null if a threshold ever stops dividing evenly, so
+// callers can fall back to showing only the running total.
+export function bonusParPerFace(variant) {
+  const { bonusThreshold } = getRuleset(variant);
+  return bonusThreshold % 21 === 0 ? bonusThreshold / 21 : null;
 }
 
 // Returns upper-section total, whether the bonus is earned and its value.

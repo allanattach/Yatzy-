@@ -1,5 +1,5 @@
 import { createGame, currentPlayer, applyScore, strikeCategory } from "./game.js";
-import { getRuleset } from "./rules.js";
+import { getRuleset, bonusParPerFace } from "./rules.js";
 import { CATEGORY_ODDS, formatOdds, formatFrequency } from "./odds.js";
 import { saveState, loadState, clearState } from "./storage.js";
 import { renderVirtualDice } from "./dice.js";
@@ -170,6 +170,7 @@ document.getElementById("btn-rules").addEventListener("click", () => {
   const variant = state ? state.variant : Number(document.querySelector('input[name="variant"]:checked').value);
   const { upper, lower, bonusThreshold, bonusPoints } = getRuleset(variant);
   const odds = CATEGORY_ODDS[variant] || {};
+  const parCount = bonusParPerFace(variant);
 
   const rows = lower
     .map((cat) => {
@@ -185,8 +186,13 @@ document.getElementById("btn-rules").addEventListener("click", () => {
 
   rulesContent.innerHTML = `
     <h3>${variant} terninger</h3>
-    <p>Op til 3 kast pr. tur. Øvre sektion bonus: ${bonusPoints} point ved ${bonusThreshold}+ i alt.</p>
+    <p>Op til 3 kast pr. tur.</p>
     <p><strong>Øvre sektion:</strong> ${upper.map((c) => c.label).join(", ")}</p>
+    <p><strong>Bonus:</strong> ${bonusPoints} point hvis øvre sektion når ${bonusThreshold} i alt.${
+      parCount
+        ? ` Det svarer præcis til <strong>${parCount} af hver værdi</strong> – ${parCount} ettere (${parCount}), ${parCount} toere (${parCount * 2}), og så videre op til ${parCount} seksere (${parCount * 6}). Får du flere end ${parCount} af en værdi, har du et forspring til at hente en anden.`
+        : ""
+    }</p>
     <h4>Nedre sektion – hvor svær er posten?</h4>
     <table class="odds-table">
       <tr><th>Post</th><th>Chance pr. tur</th></tr>

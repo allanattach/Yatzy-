@@ -1,5 +1,18 @@
-import { getRuleset, suggestCategories, computeUpperBonus, computeTotal } from "./rules.js";
+import {
+  getRuleset,
+  suggestCategories,
+  computeUpperBonus,
+  computeTotal,
+  bonusParPerFace,
+} from "./rules.js";
 import { currentPlayer } from "./game.js";
+
+// How far a score sits above or below the bonus target, in words — short enough
+// to stay on one line on a phone.
+function describeDelta(delta) {
+  if (delta === 0) return "præcis på mål";
+  return delta > 0 ? `${delta} over mål` : `${Math.abs(delta)} under mål`;
+}
 
 export function renderCurrentScorecard(container, state, diceReady, { onApply, onStrike }) {
   container.innerHTML = "";
@@ -8,6 +21,8 @@ export function renderCurrentScorecard(container, state, diceReady, { onApply, o
   const suggestions = suggestCategories(state.variant, state.dice, player.scores);
   const suggestionMap = Object.fromEntries(suggestions.map((s) => [s.key, s.score]));
   const maxScore = suggestions.length ? Math.max(...suggestions.map((s) => s.score)) : 0;
+  // How many of each face the bonus works out to, e.g. 4 of each for 84.
+  const parCount = bonusParPerFace(state.variant);
 
   const table = document.createElement("table");
   table.className = "score-table";
@@ -34,6 +49,23 @@ export function renderCurrentScorecard(container, state, diceReady, { onApply, o
       tag.className = "tag-struck";
       tag.textContent = " (streget)";
       nameTd.appendChild(tag);
+    }
+    // Spell out what this row needs for the bonus: the count of that face, and
+    // the points it comes to. Filled rows say how far off that target they are.
+    const par = cat.section === "upper" && parCount ? parCount * cat.face : null;
+    if (par !== null) {
+      const hint = document.createElement("span");
+      hint.className = "par-hint";
+      if (filled) {
+        // The target has served its purpose once the row is scored; what
+        // matters now is only whether it helped or hurt the bonus.
+        const delta = player.scores[cat.key] - par;
+        hint.classList.add(delta >= 0 ? "par-over" : "par-under");
+        hint.textContent = describeDelta(delta);
+      } else {
+        hint.textContent = `mål ${parCount} stk. = ${par}`;
+      }
+      nameTd.appendChild(hint);
     }
     tr.appendChild(nameTd);
 
@@ -83,8 +115,37 @@ export function renderCurrentScorecard(container, state, diceReady, { onApply, o
   bonusTr.className = "score-row filled";
   const bonusName = document.createElement("td");
   bonusName.textContent = `Bonus (ved ${bonusThreshold}+)`;
+  if (parCount) {
+    const hint = document.createElement("span");
+    hint.className = "par-hint";
+    hint.textContent = `${parCount} af hver værdi`;
+    bonusName.appendChild(hint);
+  }
+
   const bonusVal = document.createElement("td");
-  bonusVal.textContent = earned ? `+${bonus}` : `${upperTotal}/${bonusThreshold}`;
+  if (earned) {
+    bonusVal.textContent = `+${bonus}`;
+  } else {
+    bonusVal.textContent = `${upperTotal}/${bonusThreshold}`;
+    // Running position against the target, counting only the rows already
+    // filled — and a plain warning once the bonus is arithmetically out of
+    // reach, so nobody keeps chasing it.
+    const filledUpper = upper.filter((c) => player.scores[c.key] !== null);
+    const stillOpen = upper.filter((c) => player.scores[c.key] === null);
+    const ceiling = upperTotal + stillOpen.reduce((sum, c) => sum + state.variant * c.face, 0);
+    const hint = document.createElement("span");
+    hint.className = "par-hint";
+    if (ceiling < bonusThreshold) {
+      hint.classList.add("par-under");
+      hint.textContent = "kan ikke nås";
+    } else if (parCount && filledUpper.length) {
+      const runningPar = filledUpper.reduce((sum, c) => sum + parCount * c.face, 0);
+      const delta = upperTotal - runningPar;
+      hint.classList.add(delta >= 0 ? "par-over" : "par-under");
+      hint.textContent = describeDelta(delta);
+    }
+    if (hint.textContent) bonusVal.appendChild(hint);
+  }
   bonusTr.appendChild(bonusName);
   bonusTr.appendChild(bonusVal);
   bonusTr.appendChild(document.createElement("td"));
