@@ -7,6 +7,7 @@ import {
 } from "./game.js";
 import { getRuleset, bonusParPerFace } from "./rules.js";
 import { oddsFor, formatOdds, formatFrequency } from "./odds.js";
+import { initThemeControl } from "./theme.js";
 import { saveState, loadState, clearState } from "./storage.js";
 import { renderVirtualDice } from "./dice.js";
 import { renderPhysicalDice, isPhysicalReadingComplete } from "./camera.js";
@@ -171,6 +172,9 @@ btnPlayAgain.addEventListener("click", () => {
   addPlayerRow();
   showScreen("setup");
 });
+
+// ---------- Theme ----------
+initThemeControl(document.getElementById("btn-theme"));
 
 // ---------- Fullscreen ----------
 // Hidden entirely where the API is unavailable — notably Safari on iPhone,
