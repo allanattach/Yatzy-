@@ -16,21 +16,23 @@
   --shadow: 0 2px 10px rgba(33, 26, 18, 0.08);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #17140f;
-    --surface: #24201a;
-    --text: #f2ede3;
-    --muted: #a89c8a;
-    --accent: #e07856;
-    --accent-2: #4fa87d;
-    --border: #38332a;
-    --die-face: #f2ede3;
-    --die-edge: #cbc1ae;
-    --die-pip: #17140f;
-    --held: #4fa87d;
-    --shadow: 0 2px 14px rgba(0, 0, 0, 0.4);
-  }
+/* Dark values hang off an attribute that the theme script sets before first
+   paint, rather than off a media query. That lets an explicit choice override
+   the device setting without stating the palette twice — and the app needs
+   JavaScript to function at all, so nothing is lost by depending on it here. */
+:root[data-theme="dark"] {
+  --bg: #17140f;
+  --surface: #24201a;
+  --text: #f2ede3;
+  --muted: #a89c8a;
+  --accent: #e07856;
+  --accent-2: #4fa87d;
+  --border: #38332a;
+  --die-face: #f2ede3;
+  --die-edge: #cbc1ae;
+  --die-pip: #17140f;
+  --held: #4fa87d;
+  --shadow: 0 2px 14px rgba(0, 0, 0, 0.4);
 }
 
 * { box-sizing: border-box; }
@@ -68,8 +70,7 @@ body {
   #btn-fullscreen .btn-label { display: none; }
   /* Same font-size as its neighbours so the pills line up; the glyph alone is
      scaled up instead. */
-  #btn-fullscreen { padding: 0.45rem 0.65rem; }
-  #btn-fullscreen .btn-icon { font-size: 1.05rem; line-height: 1; }
+  #btn-fullscreen, .btn-icon-only { padding: 0.45rem 0.6rem; }
 }
 
 main {
@@ -101,6 +102,10 @@ main {
 }
 .btn-icon { margin-right: 0.35rem; }
 .btn-icon:only-child { margin-right: 0; }
+/* Glyph-only buttons: same box height as their lettered neighbours, with the
+   glyph itself scaled up so it doesn't look shrunken next to text. */
+.btn-icon-only { padding: 0.5rem 0.7rem; }
+.btn-icon-only .btn-icon { font-size: 1.05rem; line-height: 1; }
 .btn-primary { background: var(--accent); color: white; }
 .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
 .btn-ghost { background: transparent; color: var(--text); border: 1px solid var(--border); }

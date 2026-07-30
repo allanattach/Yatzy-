@@ -7,14 +7,34 @@
 <link rel="icon" href="favicon.svg" type="image/svg+xml" />
 <link rel="icon" href="favicon-32.png" sizes="32x32" type="image/png" />
 <link rel="apple-touch-icon" href="apple-touch-icon.png" />
-<meta name="theme-color" content="#b8452f" />
+<meta name="theme-color" content="#ffffff" />
 <link rel="stylesheet" href="style.css" />
+<script>
+  // Runs before the stylesheet paints, so a dark device never flashes light.
+  // Deliberately inline and duplicated from js/theme.js: a deferred module
+  // would arrive too late to prevent the flash.
+  (function () {
+    try {
+      var pref = localStorage.getItem("yatzy.theme");
+      var dark = pref === "dark" ||
+        ((!pref || pref === "auto") &&
+          window.matchMedia &&
+          window.matchMedia("(prefers-color-scheme: dark)").matches);
+      document.documentElement.dataset.theme = dark ? "dark" : "light";
+      var meta = document.querySelector('meta[name="theme-color"]');
+      if (meta) meta.setAttribute("content", dark ? "#24201a" : "#ffffff");
+    } catch (e) {
+      document.documentElement.dataset.theme = "light";
+    }
+  })();
+</script>
 </head>
 <body>
 
 <header class="app-header">
   <h1>🎲 Yatzy</h1>
   <div class="header-actions">
+    <button id="btn-theme" class="btn btn-ghost btn-icon-only" type="button" aria-label="Tema"><span class="btn-icon">◐</span></button>
     <button id="btn-fullscreen" class="btn btn-ghost" type="button" hidden aria-label="Fuld skærm"><span class="btn-icon">⛶</span><span class="btn-label">Fuld skærm</span></button>
     <button id="btn-rules" class="btn btn-ghost" type="button">Regler</button>
     <button id="btn-new-game" class="btn btn-ghost" type="button" hidden>Nyt spil</button>
