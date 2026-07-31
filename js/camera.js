@@ -92,6 +92,19 @@ export function renderPhysicalDice(container, state, { onChange }) {
         onChange();
         return;
       }
+      if (result.unstable) {
+        // A full reading the analysis could not confirm. It is right more often
+        // than not, so it goes in as a starting point — but plainly marked, so
+        // nobody scores from it without looking.
+        state.dice = result.values.slice().sort((a, b) => a - b);
+        refreshTally();
+        setStatus(
+          `Usikker læsning: ${state.dice.join(", ")}. Tjek terningerne og ret herunder, før du vælger en post.`,
+          "warn"
+        );
+        onChange();
+        return;
+      }
       setStatus(
         result.found
           ? `Kunne kun læse ${result.found} af ${state.variant} terninger sikkert – tæl op herunder i stedet.`
