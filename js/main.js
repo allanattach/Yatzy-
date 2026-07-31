@@ -3,6 +3,13 @@ import {
   currentPlayer,
   applyScore,
   strikeCategory,
+  isPlayerDone,
+  pushHistory,
+  canUndo,
+  undo,
+  addPlayer,
+  removePlayer,
+  renamePlayer,
   DEFAULT_MAX_ROLLS,
 } from "./game.js";
 import { getRuleset, bonusParPerFace } from "./rules.js";
@@ -10,7 +17,7 @@ import { oddsFor, formatOdds, formatFrequency } from "./odds.js";
 import { initThemeControl } from "./theme.js";
 import { saveState, loadState, clearState } from "./storage.js";
 import { renderVirtualDice } from "./dice.js";
-import { renderPhysicalDice, isPhysicalReadingComplete } from "./camera.js";
+import { renderPhysicalDice } from "./camera.js";
 import { renderCurrentScorecard, renderScoreboard } from "./scoreboard.js";
 import { renderPodium } from "./podium.js";
 
@@ -115,12 +122,24 @@ const roundNumberEl = document.getElementById("round-number");
 const currentPlayerNameEl = document.getElementById("current-player-name");
 
 function diceReady() {
-  return state.mode === "virtual" ? state.rollsUsed > 0 : isPhysicalReadingComplete(state);
+  // With physical dice the player enters only the dice a category needs — and
+  // the flat-scoring ones need none — so scoring is never gated on a full
+  // tally. Virtual dice still have to be thrown first.
+  return state.mode === "virtual" ? state.rollsUsed > 0 : true;
+}
+
+// "Annas scoreseddel", but "Anders' scoreseddel" — Danish drops the s after a
+// name that already ends in one.
+function possessive(name) {
+  return /[sxzSXZ]$/.test(name) ? `${name}'` : `${name}s`;
 }
 
 function refreshDiceIndependentUI() {
+  const player = currentPlayer(state);
   roundNumberEl.textContent = state.round;
-  currentPlayerNameEl.textContent = currentPlayer(state).name;
+  currentPlayerNameEl.textContent = player.name;
+  scorecardTitleEl.textContent = `${possessive(player.name)} scoreseddel`;
+  btnUndo.disabled = !canUndo(state);
   renderCurrentScorecard(scorecardEl, state, diceReady(), { onApply: handleApply, onStrike: handleStrike });
   renderScoreboard(scoreboardEl, state);
   saveState(state);
@@ -142,16 +161,104 @@ function renderGameScreen() {
 }
 
 function handleApply(categoryKey) {
+  pushHistory(state);
   applyScore(state, categoryKey);
   showScreen(state.gameOver ? "podium" : "game");
   renderGameScreen();
 }
 
 function handleStrike(categoryKey) {
+  pushHistory(state);
   strikeCategory(state, categoryKey);
   showScreen(state.gameOver ? "podium" : "game");
   renderGameScreen();
 }
+
+// ---------- Undo ----------
+const scorecardTitleEl = document.getElementById("scorecard-title");
+const btnUndo = document.getElementById("btn-undo");
+const btnUndoPodium = document.getElementById("btn-undo-podium");
+
+function handleUndo() {
+  if (!canUndo(state)) return;
+  state = undo(state);
+  saveState(state);
+  showScreen(state.gameOver ? "podium" : "game");
+  renderGameScreen();
+}
+
+btnUndo.addEventListener("click", handleUndo);
+btnUndoPodium.addEventListener("click", handleUndo);
+
+// ---------- Players during play ----------
+const playersDialog = document.getElementById("players-dialog");
+const playersEditor = document.getElementById("players-editor");
+
+function renderPlayersEditor() {
+  playersEditor.innerHTML = "";
+  state.players.forEach((player) => {
+    const li = document.createElement("li");
+
+    const input = document.createElement("input");
+    input.type = "text";
+    input.value = player.name;
+    input.setAttribute("aria-label", `Navn på ${player.name}`);
+    // Commit on change rather than per keystroke, so undo gets one entry per
+    // rename instead of one per letter.
+    input.addEventListener("change", () => {
+      if (input.value.trim() === player.name) return;
+      pushHistory(state);
+      renamePlayer(state, player.id, input.value);
+      renderPlayersEditor();
+      renderGameScreen();
+    });
+    li.appendChild(input);
+
+    if (isPlayerDone(player)) {
+      const done = document.createElement("span");
+      done.className = "player-row-done";
+      done.textContent = "færdig";
+      li.appendChild(done);
+    }
+
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "remove-player";
+    remove.textContent = "✕";
+    remove.setAttribute("aria-label", `Fjern ${player.name}`);
+    remove.disabled = state.players.length <= 1;
+    remove.addEventListener("click", () => {
+      if (!confirm(`Fjern ${player.name} fra spillet? Spillerens point går tabt.`)) return;
+      pushHistory(state);
+      removePlayer(state, player.id);
+      renderPlayersEditor();
+      showScreen(state.gameOver ? "podium" : "game");
+      renderGameScreen();
+    });
+    li.appendChild(remove);
+
+    playersEditor.appendChild(li);
+  });
+}
+
+document.getElementById("btn-players").addEventListener("click", () => {
+  renderPlayersEditor();
+  playersDialog.hidden = false;
+  const box = playersDialog.querySelector(".dialog");
+  if (box) box.scrollTop = 0;
+});
+
+document.getElementById("btn-add-player-ingame").addEventListener("click", () => {
+  pushHistory(state);
+  addPlayer(state, `Spiller ${state.players.length + 1}`);
+  renderPlayersEditor();
+  showScreen("game");
+  renderGameScreen();
+});
+
+document.getElementById("btn-close-players").addEventListener("click", () => {
+  playersDialog.hidden = true;
+});
 
 // ---------- Podium screen ----------
 const podiumEl = document.getElementById("podium");
@@ -161,6 +268,8 @@ const btnPlayAgain = document.getElementById("btn-play-again");
 function renderPodiumScreen() {
   showScreen("podium");
   renderPodium(podiumEl, finalTableEl, state);
+  // The move that ended the game is the one most worth taking back.
+  btnUndoPodium.hidden = !canUndo(state);
   saveState(state);
 }
 

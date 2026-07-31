@@ -88,6 +88,15 @@ main {
   box-shadow: var(--shadow);
 }
 .card h2 { margin-top: 0; font-size: 1.05rem; }
+.card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.6rem;
+}
+.card-head h2 { margin: 0; }
+.player-row-done { font-size: 0.72rem; color: var(--muted); }
 
 .btn {
   border: none;

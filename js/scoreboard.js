@@ -4,6 +4,7 @@ import {
   computeUpperBonus,
   computeTotal,
   bonusParPerFace,
+  fixedScoreFor,
 } from "./rules.js";
 import { currentPlayer } from "./game.js";
 
@@ -20,7 +21,16 @@ export function renderCurrentScorecard(container, state, diceReady, { onApply, o
   const { upper, lower, bonusThreshold, bonusPoints } = getRuleset(state.variant);
   const suggestions = suggestCategories(state.variant, state.dice, player.scores);
   const suggestionMap = Object.fromEntries(suggestions.map((s) => [s.key, s.score]));
-  const maxScore = suggestions.length ? Math.max(...suggestions.map((s) => s.score)) : 0;
+  // With physical dice a flat-scoring category is claimed outright, so show
+  // what it will actually award rather than 0 for an empty tally.
+  if (state.mode === "physical") {
+    for (const key of Object.keys(suggestionMap)) {
+      const fixed = fixedScoreFor(state.variant, key);
+      if (fixed !== null) suggestionMap[key] = fixed;
+    }
+  }
+  const openScores = Object.values(suggestionMap);
+  const maxScore = openScores.length ? Math.max(...openScores) : 0;
   // How many of each face the bonus works out to, e.g. 4 of each for 84.
   const parCount = bonusParPerFace(state.variant);
 

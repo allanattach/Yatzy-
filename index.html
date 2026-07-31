@@ -101,12 +101,18 @@
     <div id="physical-dice-area" class="dice-area" hidden></div>
 
     <div class="card">
-      <h2>Din scoreseddel</h2>
+      <div class="card-head">
+        <h2 id="scorecard-title">Scoreseddel</h2>
+        <button id="btn-undo" class="btn btn-ghost btn-small" type="button" disabled>↩ Fortryd</button>
+      </div>
       <div id="current-scorecard"></div>
     </div>
 
     <div class="card">
-      <h2>Samlet scoreboard</h2>
+      <div class="card-head">
+        <h2>Samlet scoreboard</h2>
+        <button id="btn-players" class="btn btn-ghost btn-small" type="button">Spillere</button>
+      </div>
       <div id="scoreboard-wrap" class="scoreboard-wrap"></div>
     </div>
   </section>
@@ -116,10 +122,21 @@
     <h2>Spillet er slut!</h2>
     <div id="podium"></div>
     <div id="final-table"></div>
+    <button id="btn-undo-podium" class="btn btn-ghost btn-large" type="button" hidden>↩ Fortryd sidste træk</button>
     <button id="btn-play-again" class="btn btn-primary btn-large" type="button">Spil igen</button>
   </section>
 
 </main>
+
+<div id="players-dialog" class="dialog-overlay" hidden>
+  <div class="dialog">
+    <h2>Spillere</h2>
+    <p>Ret et navn, fjern en spiller, eller tilføj en ny midt i spillet.</p>
+    <ul id="players-editor" class="player-list"></ul>
+    <button id="btn-add-player-ingame" class="btn btn-ghost" type="button">+ Tilføj spiller</button>
+    <button id="btn-close-players" class="btn btn-primary btn-large" type="button">Luk</button>
+  </div>
+</div>
 
 <div id="rules-dialog" class="dialog-overlay" hidden>
   <div class="dialog">
