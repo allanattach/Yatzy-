@@ -128,7 +128,7 @@ function diceReady() {
   return state.mode === "virtual" ? state.rollsUsed > 0 : true;
 }
 
-// "Annas scoreseddel", but "Anders' scoreseddel" — Danish drops the s after a
+// "Annas scoreboard", but "Anders' scoreboard" — Danish drops the s after a
 // name that already ends in one.
 function possessive(name) {
   return /[sxzSXZ]$/.test(name) ? `${name}'` : `${name}s`;
@@ -138,7 +138,7 @@ function refreshDiceIndependentUI() {
   const player = currentPlayer(state);
   roundNumberEl.textContent = state.round;
   currentPlayerNameEl.textContent = player.name;
-  scorecardTitleEl.textContent = `${possessive(player.name)} scoreseddel`;
+  scorecardTitleEl.textContent = `${possessive(player.name)} scoreboard`;
   btnUndo.disabled = !canUndo(state);
   renderCurrentScorecard(scorecardEl, state, diceReady(), { onApply: handleApply, onStrike: handleStrike });
   renderScoreboard(scoreboardEl, state);
