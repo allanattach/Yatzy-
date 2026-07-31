@@ -162,24 +162,28 @@ function buildRuleset(variant) {
   };
   const smallStraight = {
     key: "smallStraight",
+    fixed: 15,
     label: "Lille straight",
     section: "lower",
     score: (dice) => straight(dice, [1, 2, 3, 4, 5], 15),
   };
   const largeStraight = {
     key: "largeStraight",
+    fixed: 20,
     label: "Stor straight",
     section: "lower",
     score: (dice) => straight(dice, [2, 3, 4, 5, 6], 20),
   };
   const fullStraight = {
     key: "fullStraight",
+    fixed: 30,
     label: "Fuld straight (1-6)",
     section: "lower",
     score: (dice) => straight(dice, [1, 2, 3, 4, 5, 6], 30),
   };
   const doubleFullStraight = {
     key: "doubleFullStraight",
+    fixed: 60,
     label: "Dobbelt fuld straight",
     section: "lower",
     score: (dice) => doubleStraight(dice, [1, 2, 3, 4, 5, 6], 60),
@@ -219,7 +223,7 @@ function buildRuleset(variant) {
       largeStraight,
       fullHouse,
       chance,
-      { key: "yatzy", label: "Yatzy", section: "lower", score: (dice) => fixedIfNOfKind(dice, 5, 50) },
+      { key: "yatzy", fixed: 50, label: "Yatzy", section: "lower", score: (dice) => fixedIfNOfKind(dice, 5, 50) },
     ];
     bonusThreshold = 63;
     bonusPoints = 50;
@@ -238,7 +242,7 @@ function buildRuleset(variant) {
       fullHouse,
       tower,
       chance,
-      { key: "maxiYatzy", label: "Maxi Yatzy", section: "lower", score: (dice) => fixedIfNOfKind(dice, 6, 100) },
+      { key: "maxiYatzy", fixed: 100, label: "Maxi Yatzy", section: "lower", score: (dice) => fixedIfNOfKind(dice, 6, 100) },
     ];
     bonusThreshold = 84;
     bonusPoints = 100;
@@ -260,7 +264,7 @@ function buildRuleset(variant) {
       fullHouse,
       tower,
       chance,
-      { key: "gigantYatzy", label: "Gigant Yatzy", section: "lower", score: (dice) => fixedIfNOfKind(dice, 12, 200) },
+      { key: "gigantYatzy", fixed: 200, label: "Gigant Yatzy", section: "lower", score: (dice) => fixedIfNOfKind(dice, 12, 200) },
     ];
     bonusThreshold = 168;
     bonusPoints = 200;
@@ -280,6 +284,13 @@ export function getRuleset(variant) {
 export function getAllCategories(variant) {
   const { upper, lower } = getRuleset(variant);
   return upper.concat(lower);
+}
+
+// The flat point value of a category that always scores the same when hit
+// (the straights, Yatzy), or null for categories scored from the dice.
+export function fixedScoreFor(variant, categoryKey) {
+  const cat = getAllCategories(variant).find((c) => c.key === categoryKey);
+  return cat && typeof cat.fixed === "number" ? cat.fixed : null;
 }
 
 export function scoreCategory(variant, categoryKey, dice) {

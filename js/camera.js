@@ -39,7 +39,8 @@ export function renderPhysicalDice(container, state, { onChange }) {
   const intro = document.createElement("p");
   intro.className = "hold-hint";
   intro.textContent =
-    "Kast dine fysiske terninger og tag et billede – appen tæller selv øjnene op. Tjek tallene herunder og ret dem, hvis den har læst forkert.";
+    "Kast dine fysiske terninger og tag et billede – appen tæller selv øjnene op. " +
+    "Du behøver kun de terninger, posten bruger, og faste poster som straights og Yatzy kræver ingen.";
   wrap.appendChild(intro);
 
   const photoBtn = document.createElement("button");
